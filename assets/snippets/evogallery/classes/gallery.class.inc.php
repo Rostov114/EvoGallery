@@ -99,6 +99,7 @@ class Gallery
 				$limit = ' limit '.$limit;
 		} else
 			$limit = !empty($this->config['limit']) ? ' limit '.$this->config['limit'] : "";
+			
 		$result = $modx->db->query("select id, pagetitle, longtitle, description, alias, pub_date, introtext, editedby, editedon, publishedon, publishedby, menutitle from " . $modx->getFullTableName('site_content') . $filter. ' order by '. $this->config['gallerySortBy'] . ' ' . $this->config['gallerySortDir'] . $limit);
 		$recordCount = $modx->db->getRecordCount($result);
 		if ($recordCount > 0)
@@ -110,7 +111,7 @@ class Gallery
 
 				// Get total number of images for total placeholder
 				$total_result = $modx->db->select("filename", $modx->getFullTableName($this->galleriesTable), "content_id = '" . $row['id'] . "'");
-                $total = $modx->db->getRecordCount($total_result);
+                		$total = $modx->db->getRecordCount($total_result);
 
 				// Fetch first image for each gallery, using the image sort order/direction
 				$image_result = $modx->db->select("filename", $modx->getFullTableName($this->galleriesTable), "content_id = '" . $row['id'] . "'", $this->config['sortBy'] . ' ' . $this->config['sortDir'], '1');
@@ -122,6 +123,8 @@ class Gallery
 							$item_phx->setPHxVariable($name, rawurlencode(trim($value)));
 						else
 							$item_phx->setPHxVariable($name, trim($value));
+							
+					$item_phx->setPHxVariable('iteration', $count); 
 					$item_phx->setPHxVariable('images_dir', $this->config['galleriesUrl'] . $row['id'] . '/');
 					$item_phx->setPHxVariable('thumbs_dir', $this->config['galleriesUrl'] . $row['id'] . '/thumbs/');
 					$item_phx->setPHxVariable('original_dir', $this->config['galleriesUrl'] . $row['id'] . '/original/');
@@ -130,22 +133,23 @@ class Gallery
 					foreach ($row as $name => $value)
 						$item_phx->setPHxVariable($name, trim($value));
                     
-                    // Get template variable output for row and set variables as needed
-                    $row_tvs = $modx->getTemplateVarOutput('*',$row['id']);
+                    			// Get template variable output for row and set variables as needed
+                			 $row_tvs = $modx->getTemplateVarOutput('*',$row['id']);
+                			 
 					foreach ($row_tvs as $name => $value)
 						$item_phx->setPHxVariable($name, trim($value));
 
 					$item_phx->setPHxVariable('total', $total);
 
-    				if(!empty($item_tpl_first) && $count == 1){
-        				$items .= $item_phx->Parse($item_tpl_first);
-    				} else if(!empty($item_tpl_last) && $count == $recordCount){
-        				$items .= $item_phx->Parse($item_tpl_last);
-    				} else if(!empty($item_tpl_alt) && $count % $this->config['itemAltNum'] == 0){
-        				$items .= $item_phx->Parse($item_tpl_alt);
-    				} else {
-        				$items .= $item_phx->Parse($item_tpl);
-    				}
+	    				if(!empty($item_tpl_first) && $count == 1){
+	        				$items .= $item_phx->Parse($item_tpl_first);
+	    				} else if(!empty($item_tpl_last) && $count == $recordCount){
+	        				$items .= $item_phx->Parse($item_tpl_last);
+	    				} else if(!empty($item_tpl_alt) && $count % $this->config['itemAltNum'] == 0){
+	        				$items .= $item_phx->Parse($item_tpl_alt);
+	    				} else {
+	        				$items .= $item_phx->Parse($item_tpl);
+	    				}
 
 				}
 				$count++;
@@ -198,14 +202,18 @@ class Gallery
 
 		if (!empty($this->config['tags']))
 		{
-            $mode = (!empty($this->config['tagMode']) ? $this->config['tagMode'] : 'AND');
-            foreach (explode(',', $this->config['tags']) as $tag) {
-            	$tagSelect .= "keywords LIKE '%" . trim($tag) . "%' ".$mode." ";
-            }
-            $tagSelect = rtrim($tagSelect, ' '.$mode.' ');
+            		$mode = (!empty($this->config['tagMode']) ? $this->config['tagMode'] : 'AND');
+            		
+            		foreach (explode(',', $this->config['tags']) as $tag) {
+            			$tagSelect .= "keywords LIKE '%" . trim($tag) . "%' ".$mode." ";
+            		}
+            		
+            		$tagSelect = rtrim($tagSelect, ' '.$mode.' ');
+			
 			if (!empty($docSelect))
 				$docSelect.=' AND ';
-            $docSelect .= "(".$tagSelect.")";
+				
+        		$docSelect .= "(".$tagSelect.")";
 		}
 
 		$phx = new PHxParser();  // Instantiate PHx
@@ -223,10 +231,10 @@ class Gallery
 			$limit = !empty($this->config['limit']) ? ' limit '.$this->config['limit'] : "";
 		// Retrieve photos from the database table
 		$result = $modx->db->query("select * from ". $modx->getFullTableName($this->galleriesTable). $where. ' order by '. $this->config['sortBy'] . ' ' . $this->config['sortDir']. $limit);
-        $recordCount = $modx->db->getRecordCount($result);
+        	$recordCount = $modx->db->getRecordCount($result);
 		if ($recordCount > 0)
 		{
-            $count = 1;		    
+            		$count = 1;		    
 			while ($row = $modx->fetchRow($result))
 			{
 				$item_phx = new PHxParser();
@@ -236,6 +244,7 @@ class Gallery
 					else
 						$item_phx->setPHxVariable($name, trim($value));
 				$imgsize = getimagesize($this->config['galleriesPath'] . $row['content_id'] . '/' . $row['filename']); 
+				$item_phx->setPHxVariable('iteration', $count); 
 				$item_phx->setPHxVariable('width',$imgsize[0]); 
 				$item_phx->setPHxVariable('height',$imgsize[1]); 
 				$item_phx->setPHxVariable('image_withpath', $this->config['galleriesUrl'] . $row['content_id'] . '/' . $row['filename']);
@@ -283,9 +292,10 @@ class Gallery
 		$items = '';
 
 		// Retrieve photos from the database table
-	    $result = $modx->db->select("*", $modx->getFullTableName($this->galleriesTable), $picSelect);
+	    	$result = $modx->db->select("*", $modx->getFullTableName($this->galleriesTable), $picSelect);
 		if ($modx->db->getRecordCount($result) > 0)
 		{
+            		$count = 1;
 			while ($row = $modx->fetchRow($result))
 			{
 				$item_phx = new PHxParser();
@@ -294,11 +304,16 @@ class Gallery
 						$item_phx->setPHxVariable($name, rawurlencode(trim($value)));
 					else
 						$item_phx->setPHxVariable($name, trim($value));
+						
+				$item_phx->setPHxVariable('iteration', $count); 
 				$item_phx->setPHxVariable('images_dir', $this->config['galleriesUrl'] . $row['content_id'] . '/');
 				$item_phx->setPHxVariable('thumbs_dir', $this->config['galleriesUrl'] . $row['content_id'] . '/thumbs/');
 				$item_phx->setPHxVariable('original_dir', $this->config['galleriesUrl'] . $row['content_id'] . '/original/');
 				$item_phx->setPHxVariable('plugin_dir', $this->config['snippetUrl'] . $this->config['type'] . '/');
+
 				$items .= $item_phx->Parse($item_tpl);
+				
+				$count++;
 			}
 		}
 
