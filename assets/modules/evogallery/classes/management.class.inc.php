@@ -580,7 +580,25 @@ class GalleryManagement
 	*/
 	function getPhpthumbConfig($params)
 	{
-		return json_decode(str_replace("'","\"",$params),true);	
+		global $modx;
+	
+		$config = json_decode(str_replace("'",'"',$params),true);
+		
+		if (isset($_POST['content_id']))
+		{
+			$template = $modx->db->getValue($modx->db->select('template',  $modx->getFullTableName('site_content'), 'id = ' . intval($_POST['content_id'])));
+			
+			if (isset($config[$template]))
+			{
+				return $config[$template];
+			}
+			else if (isset($config['default']))
+			{
+				return $config['default'];
+			}
+		}
+
+		return $config;
 	}
 	
 	/**
