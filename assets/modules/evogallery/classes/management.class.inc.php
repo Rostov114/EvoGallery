@@ -141,7 +141,7 @@ class GalleryManagement
 			'action' => $this_page . '&action=view&content_id=' . $contentId . (isset($_GET['onlygallery'])?'&onlygallery=1':''),
 			'id' => $info['id'],
 			'filename' => urlencode($info['filename']),
-			'image' => $this->config['urlPath'] .'/' .$contentId . '/thumbs/' . rawurlencode($info['filename']),
+			'image' => $this->config['urlPath'] .'/' .$contentId . '/original/' . rawurlencode($info['filename']),
 			'title' => $info['title'],
 			'description' => $info['description'],
 			'keywords' => $info['keywords'],
@@ -323,8 +323,19 @@ class GalleryManagement
 				{
 					$filename = $modx->db->getValue($rs);
 
-					if (file_exists($target_dir . 'thumbs/' . $filename))
-						unlink($target_dir . 'thumbs/' . $filename);
+					//if (file_exists($target_dir . 'thumbs/' . $filename))
+					//	unlink($target_dir . 'thumbs/' . $filename);
+					
+					$phpthumb = $this->getPhpthumbConfig($this->config['phpthumb'], $content_id);
+						
+					if (is_array($phpthumb) AND sizeof($phpthumb) > 0)
+					{
+						foreach ($phpthumb as $path => $config)
+						{
+							unlink($target_dir . $path . '/' . $filename);
+						}
+					}
+					
 					if (file_exists($target_dir . 'original/' . $filename))
 						unlink($target_dir . 'original/' . $filename);
 					if (file_exists($target_dir . $filename))
@@ -351,7 +362,7 @@ class GalleryManagement
 				'base_path' => $modx->config['base_url'] . 'assets/modules/evogallery/',
 				'base_url' => $modx->config['base_url'],
 				'content_id' => $content_id,
-				'thumbs' => $this->config['urlPath'] . '/' . $content_id . '/thumbs/',
+				'thumbs' => $this->config['urlPath'] . '/' . $content_id . '/original/',
 				'upload_maxsize' => $modx->config['upload_maxsize']
 			);
 
@@ -368,7 +379,7 @@ class GalleryManagement
 			$result = $modx->db->select('id, filename, title, description, keywords', $modx->getFullTableName($this->galleriesTable), 'content_id=' . $content_id, 'sortorder ASC');
 			while ($row = $modx->fetchRow($result))
 			{
-				$thumbs .= "<li><div class=\"thbSelect\"><a class=\"select\" href=\"#\">".$this->lang['select']."</a></div><div class=\"thbButtons\"><a href=\"" . $this_page . "&action=edit&content_id=$content_id&edit=" . $row['id'] . (isset($_GET['onlygallery'])?"&onlygallery=1":"") ."\" class=\"edit\">".$this->lang['edit']."</a><a href=\"$this_page&action=view&content_id=$content_id&delete=" . $row['id'] . "\" class=\"delete\">".$this->lang['delete']."</a></div><img src=\"" . $this->config['urlPath'] . '/' . $content_id . '/thumbs/' . rawurlencode($row['filename']) . "\" alt=\"" . htmlentities(stripslashes($row['filename'])) . "\" class=\"thb\" /><input type=\"hidden\" name=\"sort[]\" value=\"" . $row['id'] . "\" /></li>\n";
+				$thumbs .= "<li><div class=\"thbSelect\"><a class=\"select\" href=\"#\">".$this->lang['select']."</a></div><div class=\"thbButtons\"><a href=\"" . $this_page . "&action=edit&content_id=$content_id&edit=" . $row['id'] . (isset($_GET['onlygallery'])?"&onlygallery=1":"") ."\" class=\"edit\">".$this->lang['edit']."</a><a href=\"$this_page&action=view&content_id=$content_id&delete=" . $row['id'] . "\" class=\"delete\">".$this->lang['delete']."</a></div><img src=\"" . $this->config['urlPath'] . '/' . $content_id . '/original/' . rawurlencode($row['filename']) . "\" alt=\"" . htmlentities(stripslashes($row['filename'])) . "\" class=\"thb\" /><input type=\"hidden\" name=\"sort[]\" value=\"" . $row['id'] . "\" /></li>\n";
 			}
 
 			$tplparams['gallery_header'] = $galleryheader;
@@ -393,7 +404,7 @@ class GalleryManagement
 		$parentId = isset($_GET['content_id']) ? intval($_GET['content_id']) : $this->config['docId'];
 
 		if (isset($_GET['query']))
-			$search = '<label for="query">'.$this->lang['search'].':</label> <input type="text" name="query" id="query" value="' . $_GET['query'] . '" />';
+			$search = '<label for="query">'.$this->lang['search'].':</label> <input type="text" name="query" id="query" value="' . htmlspecialchars($_GET['query']) . '" />';
 		else
 			$search = '<label for="query">'.$this->lang['search'].':</label> <input type="text" name="query" id="query" />';
 
@@ -578,18 +589,27 @@ class GalleryManagement
 	/**
 	* Decode PHPThumb configuration
 	*/
-	function getPhpthumbConfig($params)
+	function getPhpthumbConfig($params, $content_id = FALSE)
 	{
 		global $modx;
 	
 		$config = json_decode(str_replace("'",'"',$params),true);
 		
-		if (isset($_POST['content_id']))
+		//$_POST['content_id'] = (!isset($_POST['content_id']) AND $content_id !== FALSE) ? $content_id : $_POST['content_id'];
+		
+			var_dump($content_id);
+		
+		if ($content_id !== FALSE)
 		{
-			$template = $modx->db->getValue($modx->db->select('template',  $modx->getFullTableName('site_content'), 'id = ' . intval($_POST['content_id'])));
+			$template = $modx->db->getValue($modx->db->select('template',  $modx->getFullTableName('site_content'), 'id = ' . intval($content_id)));
 			
 			if (isset($config[$template]))
 			{
+				if (is_numeric($config[$template]))
+				{
+					return $config[$config[$template]];
+				}
+			
 				return $config[$template];
 			}
 			else if (isset($config['default']))
@@ -612,8 +632,8 @@ class GalleryManagement
 
 		if (!file_exists($target_dir))
 			mkdir($target_dir, $new_folder_permissions);
-		if (!file_exists($target_dir . 'thumbs'))
-			mkdir($target_dir . 'thumbs', $new_folder_permissions);
+		//if (!file_exists($target_dir . 'thumbs'))
+		//	mkdir($target_dir . 'thumbs', $new_folder_permissions);
 		if ($keepOriginal && !file_exists($target_dir . 'original'))
 			mkdir($target_dir . 'original', $new_folder_permissions);
 	}
@@ -648,16 +668,33 @@ class GalleryManagement
 			$this->makeFolders($target_dir);
 	
 			$movetofile = $keepOriginal?$target_original:$target_dir.uniqid();
+			$new_file_permissions = octdec($modx->config['new_file_permissions']);
+			$new_folder_permissions = octdec($modx->config['new_folder_permissions']);
+			
 			// Copy uploaded image to final destination
 			if (move_uploaded_file($_FILES['Filedata']['tmp_name'], $movetofile))
 			{
+				$phpthumb = $this->getPhpthumbConfig($this->config['phpthumb'], $content_id);
 				
-				$this->resizeImage($movetofile, $target_file, $this->getPhpthumbConfig($this->config['phpthumbImage']));  // Create and save main image
-				$this->resizeImage($movetofile, $target_thumb, $this->getPhpthumbConfig($this->config['phpthumbThumb']));  // Create and save thumb
+				if (is_array($phpthumb) AND sizeof($phpthumb) > 0)
+				{
+					foreach ($phpthumb as $path => $config)
+					{
+						if (!file_exists($target_dir . $path))
+						{
+							mkdir($target_dir . $path, $new_folder_permissions);
+						}
+					
+						$this->resizeImage($movetofile, $target_dir . $path . '/' . $target_fname, $config);
+					}
+					
+					//$this->resizeImage($movetofile, $target_file, $this->getPhpthumbConfig($this->config['phpthumbImage']));  // Create and save main image
+					//$this->resizeImage($movetofile, $target_thumb, $this->getPhpthumbConfig($this->config['phpthumbThumb']));  // Create and save thumb
+					
+					chmod($target_dir . $path . '/' . $target_fname, $new_file_permissions);
+				}
 				
-				$new_file_permissions = octdec($modx->config['new_file_permissions']);
-				chmod($target_file, $new_file_permissions);
-				chmod($target_thumb, $new_file_permissions);
+				
 				if ($keepOriginal)
 					chmod($target_original, $new_file_permissions);
 				else
@@ -752,12 +789,25 @@ class GalleryManagement
 		while ($row = $modx->db->getRow($ds))
 		{
 			$target_dir = $this->config['savePath'].'/'.$row['content_id'].'/';
-			if (file_exists($target_dir . 'thumbs/' . $row['filename']))
-				unlink($target_dir . 'thumbs/' . $row['filename']);
+			//if (file_exists($target_dir . 'thumbs/' . $row['filename']))
+			//	unlink($target_dir . 'thumbs/' . $row['filename']);
+			
 			if (file_exists($target_dir . 'original/' . $row['filename']))
 				unlink($target_dir . 'original/' . $row['filename']);
-			if (file_exists($target_dir . $row['filename']))
-				unlink($target_dir . $row['filename']);
+				
+				
+			//if (file_exists($target_dir . $row['filename']))
+			//	unlink($target_dir . $row['filename']);
+			
+			$phpthumb = $this->getPhpthumbConfig($this->config['phpthumb'], $row['content_id']);
+				
+			if (is_array($phpthumb) AND sizeof($phpthumb) > 0)
+			{
+				foreach ($phpthumb as $path => $config)
+				{
+					unlink($target_dir . $path . '/' . $row['filename']);
+				}
+			}
 		}
 		$modx->db->delete($modx->getFullTablename($this->galleriesTable),$where);
 		return true;
@@ -773,14 +823,29 @@ class GalleryManagement
 		if ($where===false)
 			return false;
 		$ds = $modx->db->select('id, filename, content_id',$modx->getFullTablename($this->galleriesTable),$where);
+		$new_file_permissions = octdec($modx->config['new_file_permissions']);
+		$new_folder_permissions = octdec($modx->config['new_folder_permissions']);
+		
 		while ($row = $modx->db->getRow($ds))
 		{
 			$target_dir = $this->config['savePath'].'/'.$row['content_id'].'/';
 			$orininal_file = $target_dir . 'original/' . $row['filename']; 
 			if (file_exists($orininal_file))
 			{
-				$this->resizeImage($orininal_file, $target_dir . $row['filename'], $this->getPhpthumbConfig($this->config['phpthumbImage']));  // Create and save main image
-				$this->resizeImage($orininal_file, $target_dir . 'thumbs/' . $row['filename'], $this->getPhpthumbConfig($this->config['phpthumbThumb']));  // Create and save thumb
+				$phpthumb = $this->getPhpthumbConfig($this->config['phpthumb'], $row['content_id']);
+
+				if (is_array($phpthumb) AND sizeof($phpthumb) > 0)
+				{
+					foreach ($phpthumb as $path => $config)
+					{
+						if (!file_exists($target_dir . $path))
+						{
+							mkdir($target_dir . $path, $new_folder_permissions);
+						}
+
+						$this->resizeImage($orininal_file, $target_dir . $path . '/' . $row['filename'], $config);
+					}
+				}
 			}	
 		}
 		return true;
