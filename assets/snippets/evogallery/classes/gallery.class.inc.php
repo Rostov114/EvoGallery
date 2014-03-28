@@ -125,8 +125,7 @@ class Gallery
 							$item_phx->setPHxVariable($name, trim($value));
 							
 					$item_phx->setPHxVariable('iteration', $count); 
-					$item_phx->setPHxVariable('images_dir', $this->config['galleriesUrl'] . $row['id'] . '/');
-					$item_phx->setPHxVariable('thumbs_dir', $this->config['galleriesUrl'] . $row['id'] . '/thumbs/');
+					$this->setPHxVariables($item_phx, $this->config['galleriesUrl'] . $row['id'] . '/');
 					$item_phx->setPHxVariable('original_dir', $this->config['galleriesUrl'] . $row['id'] . '/original/');
 					$item_phx->setPHxVariable('plugin_dir', $this->config['snippetUrl'] . $this->config['type'] . '/');
 
@@ -243,13 +242,10 @@ class Gallery
 						$item_phx->setPHxVariable($name, rawurlencode(trim($value)));
 					else
 						$item_phx->setPHxVariable($name, trim($value));
-				$imgsize = getimagesize($this->config['galleriesPath'] . $row['content_id'] . '/' . $row['filename']); 
+
 				$item_phx->setPHxVariable('iteration', $count); 
-				$item_phx->setPHxVariable('width',$imgsize[0]); 
-				$item_phx->setPHxVariable('height',$imgsize[1]); 
 				$item_phx->setPHxVariable('image_withpath', $this->config['galleriesUrl'] . $row['content_id'] . '/' . $row['filename']);
-				$item_phx->setPHxVariable('images_dir', $this->config['galleriesUrl'] . $row['content_id'] . '/');
-				$item_phx->setPHxVariable('thumbs_dir', $this->config['galleriesUrl'] . $row['content_id'] . '/thumbs/');
+				$this->setPHxVariables($item_phx, $this->config['galleriesUrl'] . $row['content_id'] . '/');
 				$item_phx->setPHxVariable('original_dir', $this->config['galleriesUrl'] . $row['content_id'] . '/original/');
 				$item_phx->setPHxVariable('plugin_dir', $this->config['snippetUrl'] . $this->config['type'] . '/');
 				if(!empty($item_tpl_first) && $count == 1){
@@ -306,8 +302,7 @@ class Gallery
 						$item_phx->setPHxVariable($name, trim($value));
 						
 				$item_phx->setPHxVariable('iteration', $count); 
-				$item_phx->setPHxVariable('images_dir', $this->config['galleriesUrl'] . $row['content_id'] . '/');
-				$item_phx->setPHxVariable('thumbs_dir', $this->config['galleriesUrl'] . $row['content_id'] . '/thumbs/');
+				$this->setPHxVariables($item_phx, $this->config['galleriesUrl'] . $row['content_id'] . '/');
 				$item_phx->setPHxVariable('original_dir', $this->config['galleriesUrl'] . $row['content_id'] . '/original/');
 				$item_phx->setPHxVariable('plugin_dir', $this->config['snippetUrl'] . $this->config['type'] . '/');
 
@@ -453,5 +448,56 @@ class Gallery
 		return $start.','.($stop-$start+1);
 	}	
 
+	function setPHxVariables(&$item_phx, $base_dir)
+	{
+		global $modx;
+	
+		$document = $modx->getDocuments(array($this->config['docId']), 1, 0, 'template'); 
+		$template = $document[0]['template'];
+		
+		if (!isset($this->config['module']) OR!isset($this->config['module'][$template]))
+		{
+			$result = $modx->db->query('SELECT * FROM '.$modx->getFullTableName("site_modules") . " WHERE `guid` = '" . $this->config['GUIDmodule'] . "'");
+			$row = $modx->fetchRow($result);
+
+			if (isset($row['properties']) AND $row['properties'] != '')
+			{
+				parse_str($row['properties'], $properties); 
+				
+				foreach ($properties as $key => $param)
+				{
+					$this->config['module'][$template][$key] = end(explode(';', $param));
+					
+					if ($key == 'phpthumb')
+					{
+						$config = json_decode(str_replace("'", '"', $this->config['module'][$template][$key]),true);
+					
+						if (isset($config[$template]))
+						{
+							$config = (is_numeric($config[$template])) ? $config[$config[$template]] : $config[$template];
+						}
+						else if (isset($config['default']))
+						{
+							$config = $config['default'];
+						}
+						
+						$this->config['module'][$template][$key] = $config;
+					}
+				}
+			}
+		}
+
+		if (isset($this->config['module']) AND isset($this->config['module'][$template]) AND isset($this->config['module'][$template]['phpthumb']) AND is_array($this->config['module'][$template]['phpthumb']))
+		{
+			foreach ($this->config['module'][$template]['phpthumb'] as $path => $conf)
+			{
+				// @TODO
+				//$imgsize = getimagesize($this->config['galleriesPath'] . $row['content_id'] . '/' . $row['filename']); 
+				//$item_phx->setPHxVariable('width',$imgsize[0]); 
+				//$item_phx->setPHxVariable('height',$imgsize[1]); 
+			
+				$item_phx->setPHxVariable($path . '_dir', $base_dir . $path . '/');
+			}
+		}
+	}
 }
-?>
