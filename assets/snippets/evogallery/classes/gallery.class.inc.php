@@ -49,11 +49,11 @@ class Gallery
 		global $modx;
 
 		// Retrieve chunks/default templates from disk
-		$tpl = ($this->config['tpl'] == '') ? file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.default.txt') : $modx->getChunk($this->config['tpl']);
-		$item_tpl = ($this->config['itemTpl'] == '') ? file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.item.default.txt') : $modx->getChunk($this->config['itemTpl']);
-		$item_tpl_first = ($this->config['itemTplFirst'] == '') ? @file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.item.first.txt') : $modx->getChunk($this->config['itemTplFirst']);
-		$item_tpl_alt = ($this->config['itemTplAlt'] == '') ? @file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.item.alt.txt') : $modx->getChunk($this->config['itemTplAlt']);
-		$item_tpl_last = ($this->config['itemTplLast'] == '') ? @file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.item.last.txt') : $modx->getChunk($this->config['itemTplLast']);
+		$tpl 			= $this->fetch(($this->config['tpl'] == '') 			? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.default.txt'		: $this->config['tpl']);
+		$item_tpl 		= $this->fetch(($this->config['itemTpl'] == '') 		? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.item.default.txt'	: $this->config['itemTpl']);
+		$item_tpl_first = $this->fetch(($this->config['itemTplFirst'] == '')	? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.item.first.txt'	: $this->config['itemTplFirst']);
+		$item_tpl_alt 	= $this->fetch(($this->config['itemTplAlt'] == '') 		? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.item.alt.txt'		: $this->config['itemTplAlt']);
+		$item_tpl_last 	= $this->fetch(($this->config['itemTplLast'] == '') 	? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.item.last.txt'		: $this->config['itemTplLast']);
 
 		// Hide/show docs based on configuration
 		$docSelect = '';
@@ -89,9 +89,10 @@ class Gallery
 		if (!empty($docSelect))
 			$filter.=' AND '.$docSelect;
 	
+		//Retrieve total records
+		$totalRows = $modx->db->getValue('select count(*) from '.$modx->getFullTableName('site_content').$filter);
+	
 		if ($this->config['paginate']) {
-			//Retrieve total records
-			$totalRows = $modx->db->getValue('select count(*) from '.$modx->getFullTableName('site_content').$filter);
 			if (!empty($this->config['limit']) && $totalRows>$this->config['limit'])
 				$totalRows = $this->config['limit'];
 			$limit = $this->paginate($totalRows);
@@ -155,6 +156,7 @@ class Gallery
 			}
 		}
 
+		$phx->setPHxVariable('total', $totalRows);
 		$phx->setPHxVariable('items', $items);
 		$phx->setPHxVariable('plugin_dir', $this->config['snippetUrl'] . $this->config['type'] . '/');
 
@@ -169,11 +171,11 @@ class Gallery
 		global $modx;
 
 		// Retrieve chunks/default templates from disk
-		$tpl = ($this->config['tpl'] == '') ? file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.default.txt') : $modx->getChunk($this->config['tpl']);
-		$item_tpl = ($this->config['itemTpl'] == '') ? file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.item.default.txt') : $modx->getChunk($this->config['itemTpl']);
-		$item_tpl_first = ($this->config['itemTplFirst'] == '') ? @file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.item.first.txt') : $modx->getChunk($this->config['itemTplFirst']);
-		$item_tpl_alt = ($this->config['itemTplAlt'] == '') ? @file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.item.alt.txt') : $modx->getChunk($this->config['itemTplAlt']);
-		$item_tpl_last = ($this->config['itemTplLast'] == '') ? @file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.item.last.txt') : $modx->getChunk($this->config['itemTplLast']);
+		$tpl 			= $this->fetch(($this->config['tpl'] == '') 			? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.default.txt'		: $this->config['tpl']);
+		$item_tpl 		= $this->fetch(($this->config['itemTpl'] == '') 		? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.item.default.txt'	: $this->config['itemTpl']);
+		$item_tpl_first = $this->fetch(($this->config['itemTplFirst'] == '')	? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.item.first.txt'	: $this->config['itemTplFirst']);
+		$item_tpl_alt 	= $this->fetch(($this->config['itemTplAlt'] == '') 		? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.item.alt.txt'		: $this->config['itemTplAlt']);
+		$item_tpl_last 	= $this->fetch(($this->config['itemTplLast'] == '') 	? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.item.last.txt'		: $this->config['itemTplLast']);
 
 		$docSelect = '';
 		if ($this->config['docId'] != '*' && !empty($this->config['docId']))
@@ -220,9 +222,11 @@ class Gallery
 		$items = '';
 		$limit = '';
 		$where = !empty($docSelect)?' WHERE '.$docSelect.' ':'';
+		
+		//Retrieve total records
+		$totalRows = $modx->db->getValue('select count(*) from '.$modx->getFullTableName($this->galleriesTable).$where.(!empty($this->config['limit']) ? ' limit '.$this->config['limit'] : ""));
+		
 		if ($this->config['paginate']) {
-			//Retrieve total records
-			$totalRows = $modx->db->getValue('select count(*) from '.$modx->getFullTableName($this->galleriesTable).$where.(!empty($this->config['limit']) ? ' limit '.$this->config['limit'] : ""));
 			$limit = $this->paginate($totalRows);
 			if (!empty($limit))
 				$limit = ' limit '.$limit;
@@ -260,6 +264,8 @@ class Gallery
 				$count++;
 			}
 		}
+		
+		$phx->setPHxVariable('total', $totalRows);
 		$phx->setPHxVariable('items', $items);
 		$phx->setPHxVariable('plugin_dir', $this->config['snippetUrl'] . $this->config['type'] . '/');
 
@@ -274,8 +280,9 @@ class Gallery
 		global $modx;
 
 		// Retrieve chunks/default templates from disk
-		$tpl = ($this->config['tpl'] == '') ? file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.default.txt') : $modx->getChunk($this->config['tpl']);
-		$item_tpl = ($this->config['itemTpl'] == '') ? file_get_contents($this->config['snippetPath'] . $this->config['type'] . '/tpl.item.default.txt') : $modx->getChunk($this->config['itemTpl']);
+		// Retrieve chunks/default templates from disk
+		$tpl 			= $this->fetch(($this->config['tpl'] == '') 			? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.default.txt'		: $this->config['tpl']);
+		$item_tpl 		= $this->fetch(($this->config['itemTpl'] == '') 		? '@FILE' . $this->config['snippetPath'] . $this->config['type'] . '/tpl.item.default.txt'	: $this->config['itemTpl']);
 
 		$picSelect = '';
 		if ($this->config['picId'] != '*' && !empty($this->config['picId']))
@@ -499,5 +506,50 @@ class Gallery
 				$item_phx->setPHxVariable($path . '_dir', $base_dir . $path . '/');
 			}
 		}
+	}
+	
+	// -------------------------------------------
+	// ---------------------------------------------------
+	// Function: fetch
+	// Get a template, based on version by Doze
+	// 
+	// http://forums.modx.com/thread/41066/support-comments-for-ditto?page=2#dis-post-237942
+	// ---------------------------------------------------
+	function fetch($tpl){
+		global $modx;
+		$template = "";
+
+		if ($modx->getChunk($tpl) != "") {
+			$template = $modx->getChunk($tpl);
+		} else if(substr($tpl, 0, 6) == "@FILE:") {
+			$template = $this->get_file_contents(MODX_BASE_PATH.substr($tpl, 6));
+		} else if(substr($tpl, 0, 6) == "@CODE:") {
+			$template = substr($tpl, 6);
+		} else if(substr($tpl, 0, 5) == "@FILE") {
+			$template = $this->get_file_contents(trim(substr($tpl, 5)));
+		} else if(substr($tpl, 0, 5) == "@CODE") {
+			$template = trim(substr($tpl, 5));
+		} else {
+			$template = $this->language['missing_placeholders_tpl'];
+		}
+
+		return $template;
+	}
+
+	// ---------------------------------------------------
+	// Function: get_file_contents
+	// Returns the contents of file name passed
+	// 
+	// From http://www.nutt.net/2006/07/08/file_get_contents-function-for-php-4/#more-210
+	// ---------------------------------------------------
+	function get_file_contents($filename) {
+		if (!function_exists('file_get_contents')) {
+			$fhandle = @fopen($filename, "r");
+			$fcontents = @fread($fhandle, filesize($filename));
+			fclose($fhandle);
+		} else	{
+			$fcontents = @file_get_contents($filename);
+		}
+		return $fcontents;
 	}
 }
